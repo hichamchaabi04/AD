@@ -1,0 +1,42 @@
+-- ============================================
+-- FONCTION : calcul du nouveau salaire
+-- ============================================
+CREATE OR REPLACE FUNCTION calc_salaire(p_datenaiss DATE)
+RETURNS FLOAT
+DETERMINISTIC
+BEGIN
+    DECLARE v_age INT;
+    DECLARE v_sal_base FLOAT DEFAULT 50000;
+    
+    SET v_age = TIMESTAMPDIFF(YEAR, p_datenaiss, CURDATE());
+    
+    IF v_age >= 40 THEN
+        RETURN v_sal_base + (v_sal_base * 0.20); -- 50000 + 10000 = 60000
+    ELSE
+        RETURN v_sal_base + (v_sal_base * 0.30); -- 50000 + 15000 = 65000
+    END IF;
+END;
+
+-- ============================================
+-- TRIGGER : après insertion dans personne
+-- ============================================
+CREATE OR REPLACE TRIGGER trg_salaire_marocain
+AFTER INSERT ON personne
+FOR EACH ROW
+BEGIN
+    IF NEW.nationalite = 'marocaine' THEN
+        UPDATE generique
+        SET salaire = calc_salaire(NEW.datenaiss)
+        WHERE acteur = NEW.nump;
+    END IF;
+END;
+
+-- ============================================
+-- TEST : déclencher le trigger
+-- ============================================
+INSERT INTO personne VALUES (
+    'p4', 'Youssef', 'Alami',
+    '1980-05-15',   -- âge >= 40 → salaire = 60000
+    'M', 'marocaine',
+    'Marrakech', '0612345678'
+);
